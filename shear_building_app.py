@@ -126,7 +126,7 @@ def main():
     if load_type == "Same Load for All Stories":
         single_load_latex = st.sidebar.text_input(
             "LaTeX for Load (applied equally)",
-            value=r"1e5 \sin(2 \pi * 5 t)"
+            value=r"100 \sin(2 \pi * 5 t)"
         )
         load_latex_list = single_load_latex  # just a string
     else:
@@ -142,8 +142,8 @@ def main():
 
     # Time Settings
     st.sidebar.header("Time Settings")
-    T_str = st.sidebar.text_input("Total Simulation Time (s)", value="1.0")
-    dt_str = st.sidebar.text_input("Time Step (s)", value="0.001")
+    T_str = st.sidebar.text_input("Total Simulation Time (s)", value="2.0")
+    dt_str = st.sidebar.text_input("Time Step (s)", value="0.01")
     try:
         T = float(T_str)
         dt = float(dt_str)
@@ -266,8 +266,6 @@ def main():
                 # Phi is (n x n). The i-th mode is the i-th column (0-based).
                 # We'll extract columns for the selected modes
                 import copy
-                import numpy as np
-
                 # We can create a sub-matrix with the selected columns
                 # but the existing plot_mode_shapes_plotly shows *all* modes by default
                 # in subplots. Let's just create a new function or patch the original.
