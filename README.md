@@ -14,8 +14,6 @@ The **Shear Building Analysis App** is an interactive web application built with
 5. **Visualize** results with interactive **Plotly** plots (mode shapes, time histories).  
 6. **Explore** modal properties in a detailed Pandas table.
 
-This application leverages **Python**’s scientific stack—`numpy`, `scipy`, `sympy`, `pandas`, and more—under the hood to perform robust eigenvalue analysis, matrix exponentials for state-space discretization, and dynamic response computations.
-
 ---
 
 ## Key Features
@@ -52,59 +50,6 @@ This application leverages **Python**’s scientific stack—`numpy`, `scipy`, `
    - **Sidebar** for all input parameters (masses, stiffnesses, damping, load functions, initial conditions).  
    - **Tabs** for switching between **Modal Analysis** and **Response Histories**.  
    - Option to **reset** inputs or **run** the simulation on demand.
-
----
-
-## Installation
-
-1. **Clone or download** the repository containing:
-   - `base_shear_code.py` (the core computational module)
-   - `shear_building_app.py` (the Streamlit front-end)
-   - `requirements.txt` (list of dependencies)
-   - `INSTALLATION_INSTRUCTIONS.txt` (detailed setup steps)
-
-2. **Install dependencies** (preferably inside a virtual environment):
-   ```bash
-   pip install -r requirements.txt
-   ```
-   or with conda:
-   ```bash
-   conda create -n shear_app python=3.9
-   conda activate shear_app
-   conda install --file requirements.txt
-   ```
-
-3. **Launch** the application:
-   ```bash
-   streamlit run shear_building_app.py
-   ```
-   The browser will open automatically at [http://localhost:8501](http://localhost:8501).
-
----
-
-## Usage
-
-1. **Open the sidebar** to configure model parameters:
-   - **Mass & Stiffness** per story (comma-separated).  
-   - **Damping Ratio** (\(\zeta\)) and **Mode Numbers** (for Rayleigh damping).  
-   - **Load Function(s)** in LaTeX (choose either “Same Load” or “Different Load”).  
-   - **Time Settings** (\(T\), \(\Delta t\)).  
-   - (Optional) **Initial Conditions** (displacement and velocity).
-
-2. **Run Simulation**:
-   - Click **“Run Simulation”**. The results will be computed and displayed in the right panel.
-
-3. **View Results**:
-   - **Modal Analysis** tab:
-     - A table of modes (Mode #, \(\omega\) in rad/s, \(f\) in Hz, \(T\) in s).  
-     - Rayleigh damping coefficients (\(\alpha, \beta\)).  
-     - Interactive **mode shape** plots for selected modes.
-   - **Response Histories** tab:
-     - Select **displacement**, **velocity**, **total acceleration**, or **interstory drift**.  
-     - Choose which stories to plot.  
-     - An interactive time-series chart is generated using Plotly.
-
-4. **Reset Inputs** if needed, or adjust parameters and re-run.
 
 ---
 
