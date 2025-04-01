@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 """
 Shear Building Analysis with Rayleigh Damping + Pandas + Plotly
 Developer: Mohammad Talebi-Kalaleh <talebika@ualberta.ca>
