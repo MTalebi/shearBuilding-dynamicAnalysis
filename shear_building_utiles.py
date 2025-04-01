@@ -135,32 +135,34 @@ def discretize_state_space(A, B, dt):
 ###############################################################################
 
 def latex_to_callable(latex_str, num_stories):
-    """
-    Convert a single LaTeX string to a function f(t)-> float, 
-    then replicate to each DOF.
-    """
     t_sym = sympy.Symbol('t', real=True)
     expr = parse_latex(latex_str)
-    func = sympy.lambdify(t_sym, expr, 'numpy')
+    # Use a custom dictionary mapping for pi and sin
+    func = sympy.lambdify(t_sym, expr, modules=[{"pi": math.pi, "sin": math.sin}, "math"])
     def load_at_time(t):
-        val = func(t)  # scalar
-        return np.full(num_stories, val, dtype=float)
+        t_val = float(t)  # ensure t is a Python float
+        val = func(t_val)
+        # If still symbolic, force evaluation
+        if hasattr(val, "evalf"):
+            val = val.evalf()
+        return np.full(num_stories, float(val), dtype=float)
     return load_at_time
 
 def latex_to_callable_list(latex_str_list, num_stories):
-    """
-    Convert a list of LaTeX strings (one per DOF) to a single function 
-    f(t)-> (num_stories,)
-    """
     t_sym = sympy.Symbol('t', real=True)
     exprs = [parse_latex(s) for s in latex_str_list]
-    funcs = [sympy.lambdify(t_sym, e, 'numpy') for e in exprs]
+    funcs = [sympy.lambdify(t_sym, e, modules=[{"pi": math.pi, "sin": math.sin}, "math"]) for e in exprs]
     def load_at_time(t):
+        t_val = float(t)
         vals = []
         for f in funcs:
-            vals.append(f(t))
+            val = f(t_val)
+            if hasattr(val, "evalf"):
+                val = val.evalf()
+            vals.append(float(val))
         return np.array(vals, dtype=float)
     return load_at_time
+
 
 ###############################################################################
 # 4) Main Analysis Function
@@ -187,10 +189,12 @@ def shear_building_analysis_with_rayleigh(
     results_dict : dict
        {
          "time_array": ...,
-         "x_state": ...,
+         "displacement": ...,
+         "velocity": ...,
+         "acceleration": ...,
+         "drift": ...,
          "omega_table": pd.DataFrame(...),
          "Phi": (n x n),
-         "C": (n x n),
          ...
        }
     """
@@ -256,117 +260,48 @@ def shear_building_analysis_with_rayleigh(
         x_next = Ad @ xk + Bd @ f_current
         x_state[k_step+1, :] = x_next
 
+    n = M.shape[0]
+    disps = x_state[:, :n]   # shape (num_steps, n)
+    vels  = x_state[:, n:]   # shape (num_steps, n)
+
+    # Arrays to store results
+    accs = np.zeros((num_steps, n))
+    drifts = np.zeros((num_steps, n))  # We'll store drift(i) = x(i+1) - x(i) for i=0..n-2
+
+    # Precompute M^-1 if needed
+    M_inv = np.linalg.inv(M)
+
+    for k in range(num_steps):
+        # acceleration: M^-1( f - C*vel - K*disp )
+        disp_k = disps[k, :]
+        vel_k  = vels[k, :]
+        f_k    = load_function(time_array[k])  # shape (n,)
+
+        acc_k = M_inv @ (f_k - C @ vel_k - K @ disp_k)
+        accs[k, :] = acc_k
+
+        # Interstory drift
+        # For story i, drift_i = x_i+1 - x_i. 
+        # We'll define drift_n = 0 or just keep last one as 0
+        for i_story in range(n-1):
+            drifts[k, i_story] = disp_k[i_story+1] - disp_k[i_story]
+        # Last entry remains 0 for convenience.
     # Collect results in a dictionary
     results_dict = {
         "time_array": time_array,
-        "x_state": x_state,
+        "displacement": disps,
+        "velocity": vels,
+        "acceleration": accs,
+        "drift": drifts,       
         "omega_table": df_modes,
         "Phi": Phi,
-        "C": C,
         "a_coeff": a_coeff,
         "b_coeff": b_coeff
     }
     return results_dict
 
 ###############################################################################
-# 5) Helper: Plotly Mode Shape Subplots
-###############################################################################
-
-def plot_mode_shapes_plotly(Phi, title="Mode Shapes", x_range=(-1,1)):
-    """
-    Creates a subplot figure (Plotly) for all mode shapes in Phi (n x n).
-    Each column is a mode shape. We'll add a 0 at the base.
-
-    x_range: e.g. (-1,1) to limit the horizontal axis.
-
-    Returns fig (plotly.graph_objects.Figure).
-    """
-    n = Phi.shape[0]
-    num_modes = n  # For an n-dof system, we have n modes.
-
-    # Figure out best subplot layout. Let's do up to 4 columns if there are many modes.
-    # A simple approach: a 4-wide layout if num_modes>4, otherwise do num_modes across.
-    # We'll do "rows" = ceil(num_modes/4), "cols" = min(num_modes, 4).
-    cols = min(num_modes, 4)
-    rows = math.ceil(num_modes / 4)
-
-    fig = make_subplots(rows=rows, cols=cols,
-                        subplot_titles=[f"Mode {i+1}" for i in range(num_modes)],
-                        horizontal_spacing=0.10, vertical_spacing=0.15)
-
-    # Each mode => column in Phi => plot
-    row_i, col_i = 1, 1
-    for i in range(num_modes):
-        shape = Phi[:, i]
-        # append zero at base
-        shape_with_base = np.concatenate(([0.0], shape))
-        # floors from 0..n
-        levels = np.arange(n+1)
-
-        trace = go.Scatter(
-            x=shape_with_base, y=levels,
-            mode='lines+markers',
-            name=f"Mode {i+1}",
-        )
-        fig.add_trace(trace, row=row_i, col=col_i)
-
-        # move to next subplot
-        col_i += 1
-        if col_i > cols:
-            col_i = 1
-            row_i += 1
-
-    fig.update_layout(
-        title=title,
-        showlegend=False,
-        height=300*rows,  # scale the height by number of rows
-        width=800
-    )
-    # Set x-range for all subplots
-    for ax in fig.layout["xaxis"], *[fig.layout[f"xaxis{i}"] for i in range(2, num_modes+1)]:
-        ax.range = x_range
-
-    fig.update_xaxes(title_text='Normalized Amplitude')
-    fig.update_yaxes(title_text='Story Level')
-
-    return fig
-
-###############################################################################
-# 6) Helper: Plotly Time History
-###############################################################################
-
-def plot_time_history_plotly(time_array, x_state, dof_indices=None, title="Displacement Time History"):
-    """
-    Plot the displacement time history for specified DOFs using Plotly.
-    x_state shape: (num_steps, 2*n)
-    dof_indices: list of DOFs to plot, e.g. [0, 1, 2].
-    """
-    if dof_indices is None:
-        # By default, plot all DOFs
-        dof_indices = range(x_state.shape[1]//2)
-
-    fig = go.Figure()
-    for dof in dof_indices:
-        disp = x_state[:, dof]  # displacement is in the first n columns
-        fig.add_trace(go.Scatter(
-            x=time_array, y=disp,
-            mode='lines',
-            name=f"DOF {dof+1}"
-        ))
-
-    fig.update_layout(
-        title=title,
-        xaxis_title="Time (s)",
-        yaxis_title="Displacement (m)",
-        width=900,
-        height=500,
-        legend=dict(x=0.02, y=0.98)
-    )
-    fig.update_layout(template="plotly_white")
-    return fig
-
-###############################################################################
-# 7) Example Usage (if run as main)
+# 5) Example Usage (if run as main)
 ###############################################################################
 
 if __name__ == "__main__":
@@ -388,9 +323,9 @@ if __name__ == "__main__":
     #  2) "0"
     #  3) "1e5 * (t<0.05)"
     load_latex_list = [
-        r"1e5 \sin(2 \pi * 5 t)",
+        r"100 \sin(5 t)",
         r"0",
-        r"1e5 * (t<0.05)"
+        r"100 * (t<0.05)"
     ]
 
     # Solve
@@ -413,13 +348,3 @@ if __name__ == "__main__":
 
     # 2) Show Rayleigh damping coefficients
     print(f"\nRayleigh damping: a = {results['a_coeff']:.4e}, b = {results['b_coeff']:.4e}")
-
-    # 3) Interactive plot of mode shapes
-    fig_modes = plot_mode_shapes_plotly(results["Phi"], title="Mode Shapes (Plotly)", x_range=(-1,1))
-    fig_modes.show()
-
-    # 4) Interactive time-history plot (displacements)
-    time_array = results["time_array"]
-    x_state = results["x_state"]
-    fig_time = plot_time_history_plotly(time_array, x_state, dof_indices=[0,1,2], title="Top Floor Displacements")
-    fig_time.show()
