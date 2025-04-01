@@ -88,7 +88,7 @@ def main():
     if load_type == "Same Load for All Stories":
         single_load_latex = st.sidebar.text_input(
             "LaTeX for Load (applied equally)",
-            value=r"100 \sin(2 \pi * 5 t)"
+            value=r"100 \sin(5*t)"
         )
         load_latex_list = single_load_latex  # just a string
     else:
