@@ -5,12 +5,13 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
+import copy
 
 # Import your existing functions from the base module:
 from shear_building_utiles import (
     shear_building_analysis_with_rayleigh,
-    plot_mode_shapes_plotly
-    # plus any other functions you need
+    plot_mode_shapes_plotly,
+    latex_to_callable, latex_to_callable_list
 )
 
 ###############################################################################
@@ -233,7 +234,6 @@ def main():
                 K[i-1, i] = -stiffnesses[i-1]
 
         # We'll build a load_function for computing acceleration offline:
-        from base_shear_code import latex_to_callable, latex_to_callable_list
         if isinstance(load_latex_list, str):
             load_func = latex_to_callable(load_latex_list, num_stories)
         else:
@@ -252,20 +252,18 @@ def main():
             st.subheader("Modal Properties")
             st.dataframe(df_modes.style.format(precision=4))
 
-            st.markdown(f"**Rayleigh Damping**: a = {a_coeff:.4e}, b = {b_coeff:.4e}")
 
             # Multi-select: which modes to display
             mode_options = list(range(1, num_stories+1))
             selected_modes = st.multiselect(
                 "Select Modes to Display",
                 mode_options,
-                default=mode_options[:3]  # default first 3
+                default=mode_options[:]  # default first 3
             )
             if selected_modes:
                 # Create a custom Phi that only has the selected modes
                 # Phi is (n x n). The i-th mode is the i-th column (0-based).
                 # We'll extract columns for the selected modes
-                import copy
                 # We can create a sub-matrix with the selected columns
                 # but the existing plot_mode_shapes_plotly shows *all* modes by default
                 # in subplots. Let's just create a new function or patch the original.
@@ -293,8 +291,26 @@ def main():
                         ),
                         row=1, col=i_col+1
                     )
-                    fig_modes.update_xaxes(range=(-1, 1), row=1, col=i_col+1)
-
+                    # Apply to all subplots
+                    fig_modes.update_xaxes(
+                        range=(-1.05, 1.05),
+                        dtick=1,
+                        showgrid=True,  # Explicitly enable grid
+                        gridcolor='lightgray',
+                        gridwidth=0.5,
+                        griddash='solid',
+                        minor_showgrid=False,
+                        row=1, col=i_col+1  # Specify which subplot
+                    )                    
+                    fig_modes.update_yaxes(
+                        dtick=1,  # Set grid lines exactly 1 unit apart
+                        gridcolor='lightgray',
+                        gridwidth=0.5,
+                        griddash='solid',
+                        minor_showgrid=False,
+                        row=1, 
+                        col=i_col+1
+                        )
                 fig_modes.update_layout(
                     title="Selected Mode Shapes",
                     showlegend=False,

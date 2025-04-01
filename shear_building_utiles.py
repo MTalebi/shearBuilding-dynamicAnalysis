@@ -24,6 +24,7 @@ Key Features:
 """
 
 import numpy as np
+import math
 import sympy
 from sympy.parsing.latex import parse_latex
 from scipy.linalg import expm
@@ -42,10 +43,11 @@ def shear_building_stiffness_matrix(num_stories, stiffnesses):
     K = np.zeros((num_stories, num_stories))
     for i in range(num_stories):
         K[i, i] = stiffnesses[i]
+        if i < num_stories - 1:
+            K[i, i] += stiffnesses[i+1]
         if i > 0:
-            K[i, i] += stiffnesses[i-1]
-            K[i, i-1] = -stiffnesses[i-1]
-            K[i-1, i] = -stiffnesses[i-1]
+            K[i, i-1] = -stiffnesses[i]
+            K[i-1, i] = -stiffnesses[i]
     return K
 
 def eigen_analysis(M, K):
@@ -205,17 +207,20 @@ def shear_building_analysis_with_rayleigh(
     mode_nums = np.arange(1, num_stories+1, dtype=int)
     df_modes = pd.DataFrame({
         "Mode": mode_nums,
-        "omega (rad/s)": omegas,
-        "f (Hz)": freq_hz,
-        "T (s)": periods
+        r"omega (rad/s)": omegas,
+        r"f (Hz)": freq_hz,
+        r"T (s)": periods
     })
 
     # 3) Rayleigh damping from chosen modes
     mode1 = mode_pair[0] - 1  # zero-based
     mode2 = mode_pair[1] - 1  # zero-based
     omega1 = omegas[mode1]
-    omega2 = omegas[mode2]
-    a_coeff, b_coeff = compute_rayleigh_damping_coeffs(omega1, omega2, zeta)
+    if num_stories > 1:
+        omega2 = omegas[mode2]
+        a_coeff, b_coeff = compute_rayleigh_damping_coeffs(omega1, omega2, zeta)
+    else:
+        a_coeff, b_coeff = 2 * omegas[mode1] * zeta, 0
     C = a_coeff * M + b_coeff * K
 
     # 4) State-space
@@ -282,7 +287,6 @@ def plot_mode_shapes_plotly(Phi, title="Mode Shapes", x_range=(-1,1)):
     # Figure out best subplot layout. Let's do up to 4 columns if there are many modes.
     # A simple approach: a 4-wide layout if num_modes>4, otherwise do num_modes across.
     # We'll do "rows" = ceil(num_modes/4), "cols" = min(num_modes, 4).
-    import math
     cols = min(num_modes, 4)
     rows = math.ceil(num_modes / 4)
 
