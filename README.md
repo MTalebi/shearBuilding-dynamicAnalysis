@@ -2,6 +2,7 @@
 
 Author: **Mohammad Talebi-Kalaleh**  
 Email: *<talebika@ualberta.ca>*
+App Link: <https://mtalebi-shearbuilding.streamlit.app/>
 
 ## Overview
 
