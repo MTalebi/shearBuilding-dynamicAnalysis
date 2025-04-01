@@ -70,15 +70,3 @@ The **Shear Building Analysis App** is an interactive web application built with
 ## Contributing
 
 Contributions are welcome—feel free to open a pull request or issue on the repository if you discover a bug or have a feature request.
-
----
-
-## Contact
-
-**Developer**: *Mohammad Talebi-Kalaleh (<talebika@ualberta.ca>)*
-
-If you have questions, suggestions, or comments, feel free to reach out via email.
-
----
-
-*(End of README.md)*
