@@ -88,7 +88,7 @@ def main():
     if load_type == "Same Load for All Stories":
         single_load_latex = st.sidebar.text_input(
             "LaTeX for Load (applied equally)",
-            value=r"100 \sin(5*t)"
+            value=r"100 \sin(5 t)"
         )
         load_latex_list = single_load_latex  # just a string
     else:
@@ -104,7 +104,7 @@ def main():
 
     # Time Settings
     st.sidebar.header("Time Settings")
-    T_str = st.sidebar.text_input("Total Simulation Time (s)", value="2.0")
+    T_str = st.sidebar.text_input("Total Simulation Time (s)", value="5.0")
     dt_str = st.sidebar.text_input("Time Step (s)", value="0.01")
     try:
         T = float(T_str)
@@ -145,13 +145,20 @@ def main():
 
     if reset_button:
         # This just reruns the script clearing the fields to defaults
-        st.experimental_rerun()
+        st.rerun()
 
     # ---------------
     # Main Panel
     # ---------------
     st.title("Shear Building Analysis App")
-
+    st.markdown(
+        """
+        This app performs dynamic analysis on shear building structure.
+        Please provide the necessary parameters in the sidebar.
+        
+        Developed by: Mohammad Talebi-Kalaleh
+        """
+    )
    # If the simulation has been run previously, keep the results in session_state.
     if run_button:
         with st.spinner("Running simulation..."):
@@ -180,22 +187,6 @@ def main():
     Phi = results["Phi"]
     a_coeff = results["a_coeff"]
     b_coeff = results["b_coeff"]
-
-    # For acceleration or drift, we need M, K from the base code.
-    # If not directly available in results, we can quickly rebuild them or store them.
-    # Alternatively, your base code might return M, K as well. Suppose we do that here:
-    # ...
-    # For demonstration, let's call it again or adapt as needed:
-    # We'll just do a quick "M = diag(masses), K=..." approach here:
-    M = np.diag(masses)
-    # For a shear building, you can replicate the logic from your base code if not stored:
-    K = np.zeros((num_stories, num_stories))
-    for i in range(num_stories):
-        K[i, i] = stiffnesses[i]
-        if i > 0:
-            K[i, i] += stiffnesses[i-1]
-            K[i, i-1] = -stiffnesses[i-1]
-            K[i-1, i] = -stiffnesses[i-1]
 
     # We'll build a load_function for computing acceleration offline:
     if isinstance(load_latex_list, str):
