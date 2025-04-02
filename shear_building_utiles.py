@@ -282,10 +282,13 @@ def shear_building_analysis_with_rayleigh(
 
         # Interstory drift
         # For story i, drift_i = x_i+1 - x_i. 
-        # We'll define drift_n = 0 or just keep last one as 0
-        for i_story in range(n-1):
-            drifts[k, i_story] = disp_k[i_story+1] - disp_k[i_story]
-        # Last entry remains 0 for convenience.
+        for i_story in range(n):
+            if i_story == 0:
+                # First floor drift
+                drifts[k, i_story] = disp_k[i_story]
+            else:
+                # Drift between story i and i+1
+                drifts[k, i_story] = disp_k[i_story] - disp_k[i_story-1]
     # Collect results in a dictionary
     results_dict = {
         "time_array": time_array,
