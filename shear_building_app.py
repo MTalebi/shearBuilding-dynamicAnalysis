@@ -215,11 +215,6 @@ def main():
         if selected_modes:
             # Create a custom Phi that only has the selected modes
             # Phi is (n x n). The i-th mode is the i-th column (0-based).
-            # We'll extract columns for the selected modes
-            # We can create a sub-matrix with the selected columns
-            # but the existing plot_mode_shapes_plotly shows *all* modes by default
-            # in subplots. Let's just create a new function or patch the original.
-            # For simplicity, let's do a small snippet:
 
             selected_cols = [m-1 for m in selected_modes]  # zero-based
             Phi_subset = Phi[:, selected_cols]
@@ -316,8 +311,6 @@ def main():
         for s in selected_stories:
             idx = s - 1  # zero-based
             if resp_type == "Interstory Drift" and idx == num_stories - 1:
-                # The top story's drift is 0 by definition in our array
-                # (because there's no story above it). We'll still plot for completeness.
                 pass
             fig_resp.add_trace(
                 go.Scatter(
